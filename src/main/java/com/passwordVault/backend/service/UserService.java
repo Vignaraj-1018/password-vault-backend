@@ -165,4 +165,38 @@ public class UserService {
             return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("OTP Validation Failed");
         }
     }
+
+    public ResponseEntity<?> forgotPassword(User user) {
+        User userFromDb = userRepository.findByEmail(user.getEmail());
+
+        if(userFromDb == null){
+            logger.info("User Not Found: {}", user.getEmail());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Not Found");
+        } else {
+            userFromDb.setOtp(emailService.generateOTP());
+            Thread thread = new Thread(() -> emailService.sendEmailOTP(userFromDb));
+            thread.start();
+            userRepository.save(userFromDb);
+            logger.info("OTP Sent Successfully: {}", userFromDb.getEmail());
+            return ResponseEntity.status(HttpStatus.OK).body("OTP Sent Successfully, Validate Email to Continue");
+        }
+    }
+
+    public ResponseEntity<?> resetPassword(User user) {
+        User userFromDb = userRepository.findByEmail(user.getEmail());
+
+        if(userFromDb == null){
+            logger.info("User Not Found: {}", user.getEmail());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Not Found");
+        } else if (userFromDb.authenticated) {
+            userFromDb.setPassword(passwordEncoder.encode(user.getPassword()));
+            userRepository.save(userFromDb);
+            logger.info("Reset Password Successful: {}", user.getEmail());
+            return ResponseEntity.status(HttpStatus.OK).body("Reset Password Successful");
+        }
+        else{
+            logger.info("User is Not Authenticated: {}", user.getEmail());
+            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("User is not Authenticated");
+        }
+    }
 }

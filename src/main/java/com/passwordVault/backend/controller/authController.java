@@ -39,4 +39,14 @@ public class authController {
         return userService.validateOtp(user);
     }
 
+    @PostMapping("/forgotPassword")
+    public ResponseEntity<?> forgotPassword(@RequestBody User user){
+        return userService.forgotPassword(user);
+    }
+
+    @PostMapping("/resetPassword")
+    public ResponseEntity<?> resetPassword(@RequestBody User user){
+        return userService.resetPassword(user);
+    }
+
 }
