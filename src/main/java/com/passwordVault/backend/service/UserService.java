@@ -89,8 +89,6 @@ public class UserService {
 
         String newAccessToken = jwtUtils.generateAccessToken(userFromDB.getEmail());
         String newRefreshToken = jwtUtils.generateRefreshToken(userFromDB.getEmail());
-        System.out.println(newAccessToken);
-        System.out.println(newRefreshToken);
         userFromDB.setRefreshToken(newRefreshToken);
         userRepository.save(userFromDB);
         return ResponseEntity.ok(Map.of(
