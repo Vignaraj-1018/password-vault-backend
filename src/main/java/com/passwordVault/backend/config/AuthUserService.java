@@ -27,7 +27,7 @@ public class AuthUserService implements UserDetailsService {
             throw new UsernameNotFoundException("User not found: " + username);
         }
         return new User(
-                user.getUsername(),               // used as principal
+                user.getEmail(),                  // used as principal
                 user.getPassword(),               // hashed password
                 Collections.singleton(new SimpleGrantedAuthority("ROLE_USER")) // optional
         );

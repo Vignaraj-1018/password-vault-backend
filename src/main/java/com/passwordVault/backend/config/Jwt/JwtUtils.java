@@ -1,6 +1,5 @@
 package com.passwordVault.backend.config.Jwt;
 
-import com.passwordVault.backend.model.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -8,7 +7,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -37,8 +35,7 @@ public class JwtUtils {
         return null;
     }
 
-    public String generateTokenFromUsername(String userName) {
-//        String username = userDetails.getUsername();
+    public String generateAccessToken(String userName) {
         return Jwts.builder()
                 .subject(userName)
                 .issuedAt(new Date())
@@ -68,19 +65,7 @@ public class JwtUtils {
     }
 
     public boolean validateJwtToken(String authToken) {
-        try {
-//            System.out.println("Validate");
-            Jwts.parser().verifyWith((SecretKey) key()).build().parseSignedClaims(authToken);
-            return true;
-        } catch (MalformedJwtException e) {
-            logger.error("Invalid JWT token: {}", e.getMessage());
-        } catch (ExpiredJwtException e) {
-            logger.error("JWT token is expired: {}", e.getMessage());
-        } catch (UnsupportedJwtException e) {
-            logger.error("JWT token is unsupported: {}", e.getMessage());
-        } catch (IllegalArgumentException e) {
-            logger.error("JWT claims string is empty: {}", e.getMessage());
-        }
-        return false;
+        Jwts.parser().verifyWith((SecretKey) key()).build().parseSignedClaims(authToken);
+        return true;
     }
 }

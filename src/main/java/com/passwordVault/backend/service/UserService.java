@@ -3,6 +3,8 @@ package com.passwordVault.backend.service;
 import com.passwordVault.backend.config.Jwt.JwtUtils;
 import com.passwordVault.backend.model.User;
 import com.passwordVault.backend.repository.UserRepository;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +35,7 @@ public class UserService {
     private JwtUtils jwtUtils;
 
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(UserService    .class);
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
 
     public ResponseEntity<?> register(User user) {
@@ -50,7 +52,7 @@ public class UserService {
                     )
             );
 
-            String accessToken = jwtUtils.generateTokenFromUsername(auth.getName());
+            String accessToken = jwtUtils.generateAccessToken(auth.getName());
             String refreshToken = jwtUtils.generateRefreshToken(auth.getName());
 
             User existingUser = userRepository.findByEmail(user.getEmail());
@@ -69,14 +71,30 @@ public class UserService {
 
     public ResponseEntity<?> refreshToken(User user) {
         String refreshToken = user.getRefreshToken();
-        User auth = userRepository.findByRefreshToken(refreshToken);
+        User userFromDB = userRepository.findByRefreshToken(refreshToken);
 
-        if (auth == null) {
+        if (userFromDB == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
         }
 
-        String newAccessToken = jwtUtils.generateTokenFromUsername(auth.getUsername());
+        try {
+            jwtUtils.validateJwtToken(refreshToken);
+        } catch (ExpiredJwtException ex) {
+            logger.info("Refresh token expired, but rotating anyway");
+        } catch (JwtException ex) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                    "error", "Invalid refresh token"
+            ));
+        }
+
+        String newAccessToken = jwtUtils.generateAccessToken(userFromDB.getEmail());
+        String newRefreshToken = jwtUtils.generateRefreshToken(userFromDB.getEmail());
+        System.out.println(newAccessToken);
+        System.out.println(newRefreshToken);
+        userFromDB.setRefreshToken(newRefreshToken);
+        userRepository.save(userFromDB);
         return ResponseEntity.ok(Map.of(
+                "refreshToken", newRefreshToken,
                 "accessToken", newAccessToken
         ));
     }

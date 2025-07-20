@@ -12,4 +12,9 @@ public class mainController {
     public ResponseEntity<?> helloWorld(){
         return new ResponseEntity<>("Hello, World!",HttpStatus.OK);
     }
+
+    @GetMapping("/example")
+    public ResponseEntity<?> example(){
+        return new ResponseEntity<>("Hello, World!",HttpStatus.OK);
+    }
 }

@@ -31,9 +31,7 @@ public class SecurityConfig {
     public SecurityFilterChain defaultFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(authorizeRequests ->
                 authorizeRequests
-                        .requestMatchers("/auth/**").permitAll()
-                        .requestMatchers("/hello").permitAll()
-                        .requestMatchers("/").permitAll()
+                        .requestMatchers("/auth/**", "/hello", "/", "/error").permitAll()
                         .anyRequest().authenticated());
         http.sessionManagement(
                 session ->
