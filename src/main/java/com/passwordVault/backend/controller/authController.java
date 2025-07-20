@@ -29,4 +29,14 @@ public class authController {
         return userService.refreshToken(user);
     }
 
+    @PostMapping("/resendOtp")
+    public ResponseEntity<?> resendOtp(@RequestBody User user){
+        return userService.resendOtp(user);
+    }
+
+    @PostMapping("/authenticate")
+    public ResponseEntity<?> authenticateUser(@RequestBody User user){
+        return userService.validateOtp(user);
+    }
+
 }

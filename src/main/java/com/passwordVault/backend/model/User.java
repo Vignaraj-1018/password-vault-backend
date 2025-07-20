@@ -15,4 +15,6 @@ public class User {
     private String email;
     private String password;
     private String refreshToken;
+    private int otp;
+    public boolean authenticated;
 }

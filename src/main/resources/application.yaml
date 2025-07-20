@@ -5,12 +5,17 @@ spring:
     mongodb:
       uri: mongodb+srv://passvault1018:t2DDmJuodnggaXWc@cluster0.ya8to86.mongodb.net/
       database: passwordmanager
-
   app:
     jwtSecret: TXlTdXBlclNlY3JldEtleVRoYXRJc0F0TGVhc3RTaXh0eUZvdXJDaGFyYWN0ZXJzTG9uZzEyMyE=
     jwtExpirationMs: 3600000
     jwtRefreshExpirationMs: 604800000
 
+  smtp:
+    host: smtp.gmail.com
+    port: 587
+    username: passvault1018@gmail.com
+    password: hqgjcfdgsscitfwa
+
 logging:
   level:
-    root: INFO
+    root: info
