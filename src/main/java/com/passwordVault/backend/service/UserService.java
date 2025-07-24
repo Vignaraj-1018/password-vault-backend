@@ -44,7 +44,7 @@ public class UserService {
     public ResponseEntity<?> register(User user) {
         if(userRepository.existsByEmail(user.getEmail())){
             logger.info("User Already Exists: {}", user.getEmail());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("User Already Exists");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message","User Already Exists"));
         }
 
         String rawPassword = user.getPassword();
@@ -84,11 +84,12 @@ public class UserService {
 
             return ResponseEntity.ok(Map.of(
                     "accessToken", accessToken,
-                    "refreshToken", refreshToken
+                    "refreshToken", refreshToken,
+                    "message", "User Authentication Successful"
             ));
         } catch (AuthenticationException ex) {
             logger.info("User Authentication Failed: {}", user.getEmail());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("AUTH_FAILED");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error","User Authentication Failed"));
         }
     }
 
@@ -98,30 +99,26 @@ public class UserService {
 
         if (userFromDB == null) {
             logger.info("User not found or Invalid refresh token");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid refresh token");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error","Invalid refresh token"));
         }
 
         try {
             jwtUtils.validateJwtToken(refreshToken);
+            String newAccessToken = jwtUtils.generateAccessToken(userFromDB.getEmail());
             logger.info("Refresh token Validated: {}", userFromDB.getEmail());
+            return ResponseEntity.ok(Map.of(
+                    "accessToken", newAccessToken,
+                    "message", "Refresh token Validated"
+            ));
         } catch (ExpiredJwtException ex) {
-            logger.info("Refresh token expired, but rotating anyway: {}", userFromDB.getEmail());
+            logger.info("Refresh token expired: {}", userFromDB.getEmail());
+            userFromDB.setRefreshToken(null);
+            userRepository.save(userFromDB);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error","Refresh token expired, Please Login Again"));
         } catch (JwtException ex) {
             logger.info("Invalid refresh token: {}", userFromDB.getEmail());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                    "error", "Invalid refresh token"
-            ));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error","Invalid refresh token"));
         }
-
-        String newAccessToken = jwtUtils.generateAccessToken(userFromDB.getEmail());
-        String newRefreshToken = jwtUtils.generateRefreshToken(userFromDB.getEmail());
-        userFromDB.setRefreshToken(newRefreshToken);
-        userRepository.save(userFromDB);
-        logger.info("New tokens updated: {}", userFromDB.getEmail());
-        return ResponseEntity.ok(Map.of(
-                "refreshToken", newRefreshToken,
-                "accessToken", newAccessToken
-        ));
     }
 
     public ResponseEntity<?> resendOtp(User user) {
@@ -129,10 +126,10 @@ public class UserService {
 
         if(userFromDb == null){
             logger.info("User Not Found: {}", user.getEmail());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Not Found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error","User Not Found"));
         } else if (userFromDb.authenticated) {
             logger.info("User Already Authenticated: {}", user.getEmail());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("User Already Authenticated");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error","User Already Authenticated"));
         }
 
         userFromDb.setOtp(emailService.generateOTP());
@@ -142,7 +139,7 @@ public class UserService {
         Thread emailThread = new Thread(() -> emailService.sendEmailOTP(userFromDb));
         emailThread.start();
 
-        return ResponseEntity.status(HttpStatus.OK).body("Resend OTP Successful");
+        return ResponseEntity.status(HttpStatus.OK).body(Map.of("message","Resend OTP Successful"));
     }
 
     public ResponseEntity<?> validateOtp(User user) {
@@ -150,19 +147,19 @@ public class UserService {
 
         if(userFromDb == null){
             logger.info("User Not Found: {}", user.getEmail());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Not Found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error","User Not Found"));
         } else if (userFromDb.authenticated) {
             logger.info("User Already Authenticated: {}", user.getEmail());
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("User Already Authenticated");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error","User Already Authenticated"));
         } else if (userFromDb.getOtp() == user.getOtp()) {
             logger.info("Otp Matched: {}", user.getOtp());
             userFromDb.setAuthenticated(true);
             userRepository.save(userFromDb);
             logger.info("OTP Validation Successful: {}", userFromDb.getEmail());
-            return ResponseEntity.status(HttpStatus.OK).body("OTP Validation Successful");
+            return ResponseEntity.status(HttpStatus.OK).body(Map.of("message","OTP Validation Successful"));
         } else {
             logger.info("Otp Mismatch: {}", user.getOtp());
-            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("OTP Validation Failed");
+            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(Map.of("error","OTP Validation Failed"));
         }
     }
 
@@ -171,14 +168,15 @@ public class UserService {
 
         if(userFromDb == null){
             logger.info("User Not Found: {}", user.getEmail());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Not Found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error","User Not Found"));
         } else {
             userFromDb.setOtp(emailService.generateOTP());
             Thread thread = new Thread(() -> emailService.sendEmailOTP(userFromDb));
             thread.start();
+            userFromDb.setAuthenticated(false);
             userRepository.save(userFromDb);
             logger.info("OTP Sent Successfully: {}", userFromDb.getEmail());
-            return ResponseEntity.status(HttpStatus.OK).body("OTP Sent Successfully, Validate Email to Continue");
+            return ResponseEntity.status(HttpStatus.OK).body(Map.of("message","OTP Sent Successfully, Validate Email to Continue"));
         }
     }
 
@@ -187,16 +185,16 @@ public class UserService {
 
         if(userFromDb == null){
             logger.info("User Not Found: {}", user.getEmail());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User Not Found");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error","User Not Found"));
         } else if (userFromDb.authenticated) {
             userFromDb.setPassword(passwordEncoder.encode(user.getPassword()));
             userRepository.save(userFromDb);
             logger.info("Reset Password Successful: {}", user.getEmail());
-            return ResponseEntity.status(HttpStatus.OK).body("Reset Password Successful");
+            return ResponseEntity.status(HttpStatus.OK).body(Map.of("message","Reset Password Successful"));
         }
         else{
             logger.info("User is Not Authenticated: {}", user.getEmail());
-            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("User is not Authenticated");
+            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(Map.of("error","User is not Authenticated"));
         }
     }
 }
